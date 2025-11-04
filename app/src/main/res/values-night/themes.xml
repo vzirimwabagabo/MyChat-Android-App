@@ -1,0 +1,11 @@
+<!-- File: res/values-night/themes.xml -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme for night mode. -->
+    <style name="Base.Theme.MyChat" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <!--
+            Customize your dark theme here.
+            For example, you can change the primary color.
+            <item name="colorPrimary">@color/my_dark_primary</item>
+        -->
+    </style>
+</resources>
