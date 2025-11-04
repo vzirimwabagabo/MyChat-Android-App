@@ -24,7 +24,8 @@ MyChat is a real-time chat application for Android, built using Firebase. It all
 
 *(It's a great idea to add screenshots of your app here to showcase your work!)*
 
-![Screenshot of the chat screen](path/to/your/screenshot.png)
+![Screenshot of the chat screen](![WhatsApp Image 2025-11-04 at 16 38 16_34e68ebf](https://github.com/user-attachments/assets/b2d3d4cc-c296-4712-8f46-e9faf8f0c0d1)
+)
 
 ## Setup and Installation
 
