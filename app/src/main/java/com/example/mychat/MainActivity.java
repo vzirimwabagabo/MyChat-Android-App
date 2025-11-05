@@ -2,6 +2,7 @@
 package com.example.mychat;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.format.DateFormat;
 import android.view.Menu;
@@ -9,6 +10,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -17,6 +20,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.bumptech.glide.Glide;
 import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.database.FirebaseListAdapter;
 import com.firebase.ui.database.FirebaseListOptions;
@@ -24,54 +28,61 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.util.Collections;
 
 public class MainActivity extends AppCompatActivity {
 
+    // ... (class variables are unchanged)
     private static final int SIGN_IN_REQUEST_CODE = 1;
+    private static final int PICK_IMAGE_REQUEST = 2;
     private FirebaseListAdapter<ChatMessage> adapter;
-
     private static final int VIEW_TYPE_MESSAGE_SENT = 0;
     private static final int VIEW_TYPE_MESSAGE_RECEIVED = 1;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // ... (sign-in logic is unchanged)
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
             startActivityForResult(AuthUI.getInstance().createSignInIntentBuilder()
                     .setAvailableProviders(Collections.singletonList(new AuthUI.IdpConfig.EmailBuilder().build()))
                     .build(), SIGN_IN_REQUEST_CODE);
         } else {
-            // Check if display name is null and handle it
-            String displayName = FirebaseAuth.getInstance().getCurrentUser().getDisplayName();
-            if (displayName == null || displayName.trim().isEmpty()) {
-                displayName = "Anonymous";
-            }
-            Toast.makeText(this, "Welcome " + displayName, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Welcome " + getDisplayName(), Toast.LENGTH_LONG).show();
             displayChatMessages();
         }
 
         FloatingActionButton fab = findViewById(R.id.fab);
         EditText input = findViewById(R.id.input);
+        ImageButton attachButton = findViewById(R.id.attach_button);
 
+        // Text message sending logic
         fab.setOnClickListener(view -> {
             String message = input.getText().toString().trim();
             if (!message.isEmpty()) {
-                String displayName = FirebaseAuth.getInstance().getCurrentUser().getDisplayName();
-                if (displayName == null || displayName.trim().isEmpty()) {
-                    displayName = "Anonymous";
-                }
+                // *** FIX #1: Use the new factory method for text messages ***
                 FirebaseDatabase.getInstance().getReference().push().setValue(
-                        new ChatMessage(message, displayName)
+                        ChatMessage.createTextMessage(message, getDisplayName())
                 );
                 input.setText("");
             }
         });
+
+        // Image message sending logic
+        attachButton.setOnClickListener(view -> {
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGE_REQUEST);
+        });
     }
 
+    // ... (displayChatMessages method is unchanged)
     private void displayChatMessages() {
         ListView listOfMessages = findViewById(R.id.list_of_messages);
 
@@ -83,7 +94,6 @@ public class MainActivity extends AppCompatActivity {
 
         adapter = new FirebaseListAdapter<ChatMessage>(options) {
 
-            // *** FIX 1: Tell the adapter there are two different view types. ***
             @Override
             public int getViewTypeCount() {
                 return 2;
@@ -93,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
             public int getItemViewType(int position) {
                 // Ensure current user and display name are not null to prevent crashes
                 if (FirebaseAuth.getInstance().getCurrentUser() != null &&
-                        getItem(position).getMessageUser().equals(FirebaseAuth.getInstance().getCurrentUser().getDisplayName())) {
+                        getItem(position).getMessageUser().equals(getDisplayName())) {
                     return VIEW_TYPE_MESSAGE_SENT;
                 }
                 return VIEW_TYPE_MESSAGE_RECEIVED;
@@ -104,24 +114,36 @@ public class MainActivity extends AppCompatActivity {
                 int viewType = getItemViewType(position);
                 View view = convertView;
 
-                // *** FIX 2: Inflate a new view if the recycled view is of the wrong type. ***
-                // We check if the view is null OR if its tag doesn't match the required view type.
                 if (view == null || (int)view.getTag() != viewType) {
                     if (viewType == VIEW_TYPE_MESSAGE_SENT) {
                         view = getLayoutInflater().inflate(R.layout.item_chat_outgoing, parent, false);
-                    } else { // VIEW_TYPE_MESSAGE_RECEIVED
+                    } else {
                         view = getLayoutInflater().inflate(R.layout.item_chat_incoming, parent, false);
                     }
-                    // We use a tag to remember the type of this view.
                     view.setTag(viewType);
                 }
 
-                // Now that we have the correct view, we can populate it.
                 ChatMessage model = getItem(position);
 
+                // Logic to handle both text and image messages
                 TextView messageText = view.findViewById(R.id.message_text);
+                ImageView messageImage = view.findViewById(R.id.message_image);
                 TextView messageTime = view.findViewById(R.id.message_time);
-                messageText.setText(model.getMessageText());
+
+                if (model.getMessageImageUrl() != null) {
+                    // This is an image message
+                    messageText.setVisibility(View.GONE);
+                    messageImage.setVisibility(View.VISIBLE);
+                    Glide.with(MainActivity.this)
+                            .load(model.getMessageImageUrl())
+                            .into(messageImage);
+                } else {
+                    // This is a text message
+                    messageText.setVisibility(View.VISIBLE);
+                    messageImage.setVisibility(View.GONE);
+                    messageText.setText(model.getMessageText());
+                }
+
                 messageTime.setText(DateFormat.format("h:mm a", model.getMessageTime()));
 
                 if (viewType == VIEW_TYPE_MESSAGE_RECEIVED) {
@@ -134,16 +156,48 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             protected void populateView(@NonNull View v, @NonNull ChatMessage model, int position) {
-                // This method is now completely empty because we've moved all the logic to getView().
+                // This method is correctly empty because we've moved all the logic to getView().
             }
         };
-        // Auto-scroll to the bottom
+
         listOfMessages.setTranscriptMode(ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
         listOfMessages.setStackFromBottom(true);
         listOfMessages.setAdapter(adapter);
     }
 
-    // --- Lifecycle and Menu methods (remain the same) ---
+    // ... (getDisplayName method is unchanged)
+    private String getDisplayName() {
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            return "Anonymous";
+        }
+        String displayName = FirebaseAuth.getInstance().getCurrentUser().getDisplayName();
+        return (displayName == null || displayName.trim().isEmpty()) ? "Anonymous" : displayName;
+    }
+
+    private void uploadImageToFirebase(Uri imageUri) {
+        final StorageReference photoRef = FirebaseStorage.getInstance().getReference().child("chat_photos/" + System.currentTimeMillis());
+        Toast.makeText(this, "Uploading image...", Toast.LENGTH_SHORT).show();
+
+        photoRef.putFile(imageUri).continueWithTask(task -> {
+            if (!task.isSuccessful()) {
+                throw task.getException();
+            }
+            return photoRef.getDownloadUrl();
+        }).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                Uri downloadUri = task.getResult();
+                // *** FIX #2: Use the new factory method for image messages ***
+                FirebaseDatabase.getInstance().getReference().push().setValue(
+                        ChatMessage.createImageMessage(getDisplayName(), downloadUri.toString())
+                );
+                Toast.makeText(MainActivity.this, "Image sent!", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(MainActivity.this, "Upload failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    // ... (onStart, onStop, onActivityResult, onCreateOptionsMenu, onOptionsItemSelected are unchanged)
     @Override
     protected void onStart() {
         super.onStart();
@@ -167,6 +221,10 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "We couldn't sign you in. Please try again later.", Toast.LENGTH_LONG).show();
                 finish();
             }
+        }
+        // Handle the result of the image picker
+        else if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            uploadImageToFirebase(data.getData());
         }
     }
 

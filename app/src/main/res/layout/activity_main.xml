@@ -5,48 +5,76 @@
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingBottom="16dp"
-    android:paddingLeft="16dp"
-    android:paddingRight="16dp"
-    android:paddingTop="16dp"
     tools:context=".MainActivity">
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:clickable="true"
-        android:src="@drawable/ic_send_black_24dp"
-        android:id="@+id/fab"
-        app:tint="@android:color/white"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true"
-        app:fabSize="mini" />
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_toLeftOf="@id/fab"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="true">
-
-        <EditText
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/input"
-            android:id="@+id/input"
-            />
-
-    </com.google.android.material.textfield.TextInputLayout>
-
+    <!-- The ListView takes up all the space above the input area at the bottom. -->
     <ListView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"
-        android:layout_above="@id/fab"
-        android:dividerHeight="16dp"
-        android:divider="@android:color/transparent"
         android:id="@+id/list_of_messages"
-        android:layout_marginBottom="16dp"/>
+        android:layout_width="match_parent"
+        android:layout_height="891dp"
+        android:layout_above="@+id/input_container"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginBottom="-13dp"
+        android:clipToPadding="false"
+        android:divider="@null"
+        android:dividerHeight="0dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:stackFromBottom="true"
+        android:transcriptMode="alwaysScroll" />
+
+    <!-- This is a horizontal container for all input controls at the bottom.
+         Using a LinearLayout here is much more stable than complex RelativeLayout rules. -->
+    <LinearLayout
+        android:id="@+id/input_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+
+        <!-- 1. The ImageButton for attaching photos with your chosen icon -->
+        <ImageButton
+            android:id="@+id/attach_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/outline_add_a_photo_24"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Attach Image"
+            app:tint="?attr/colorOnSurface" />
+
+        <!-- 2. The text input field -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Type a message"
+                android:inputType="textCapSentences|textMultiLine"
+                android:maxLines="5"/>
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="Send message"
+            android:src="@drawable/baseline_send_24"
+            app:fabSize="normal"
+            app:tint="@android:color/white" />
+
+    </LinearLayout>
 
 </RelativeLayout>
