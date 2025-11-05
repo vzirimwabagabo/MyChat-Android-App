@@ -70,9 +70,11 @@
             android:id="@+id/fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
             android:contentDescription="Send message"
             android:src="@drawable/baseline_send_24"
-            app:fabSize="normal"
+            app:fabSize="mini"
             app:tint="@android:color/white" />
 
     </LinearLayout>
